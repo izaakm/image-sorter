@@ -1,18 +1,21 @@
+#!/usr/bin/env python3
+
 """
- Main script for sorting images in a folder into subfolders. This script launches a GUI which displays
- one image after the other and lets the user vote for different given labels from a list given as input to the
- script.
+Main script for sorting images in a folder into subfolders. This script
+launches a GUI which displays one image after the other and lets the user vote
+for different given labels from a list given as input to the script.
 
- USAGE:
+USAGE:
 
- python sort_folder.py --folder <INPUT-FOLDER> --labels <INPUT-LABEL1> <INPUT-LABEL2> ...
+    python sort_folder.py --folder <INPUT-FOLDER> --labels <INPUT-LABEL1> <INPUT-LABEL2> ...
 
- Author: Christian Baumgartner (c.baumgartner@imperial.ac.uk)
- Date: 31. Jan 2016
+Author: Christian Baumgartner (c.baumgartner@imperial.ac.uk)
+Date: 31. Jan 2016
 """
 
 import argparse
-import Tkinter as tk
+# import Tkinter as tk
+import tkinter as tk
 import os
 from shutil import copyfile, move
 from PIL import ImageTk, Image
@@ -147,7 +150,7 @@ class ImageGui:
         """
         root, file_name = os.path.split(input_path)
         output_path = os.path.join(root, label, file_name)
-        print " %s --> %s" % (file_name, label)
+        print(" %s --> %s" % (file_name, label))
         copyfile(input_path, output_path)
 
     @staticmethod
@@ -161,7 +164,7 @@ class ImageGui:
         """
         root, file_name = os.path.split(input_path)
         output_path = os.path.join(root, label, file_name)
-        print " %s --> %s" % (file_name, label)
+        print(" %s --> %s" % (file_name, label))
         move(input_path, output_path)
 
 
