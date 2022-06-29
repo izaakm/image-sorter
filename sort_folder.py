@@ -20,9 +20,11 @@ import os
 import glob
 import sys
 import shutil
+import json
 
 # from shutil import copyfile, move
 from PIL import ImageTk, Image
+from collections import defaultdict
 
 IMAGE_EXTENSIONS = set(['.jpg', '.jpeg', '.gif', '.tif', '.tiff', '.psd', '.bmp'])
 
@@ -32,7 +34,7 @@ class ImageGui:
     Useful, for sorting views into sub views or for removing outliers from the data.
     """
 
-    def __init__(self, master, labels, paths, destination):
+    def __init__(self, master, labels, paths, records, destination):
         """
         Initialise GUI
         :param master: The parent window
@@ -54,7 +56,9 @@ class ImageGui:
         self.index = 0
         self.labels = labels
         self.paths = paths
+        self.records = records
         self.destination = destination
+        self.data_path = os.path.join(destination, 'data.json')
 
         # Number of labels and paths
         self.n_labels = len(labels)
@@ -66,14 +70,23 @@ class ImageGui:
         self.image_panel = tk.Label(frame)
 
         # set image container to first image
-        self.set_image(paths[self.index])
+        # self.set_image(paths[self.index])
+        self.set_image(records[self.index]['path'])
 
         # Make buttons
         self.buttons = []
-        for label in labels:
+        for key, label in enumerate(labels):
             self.buttons.append(
-                    tk.Button(frame, text=label, width=10, height=1, command=lambda l=label: self.vote(l))
+                tk.Button(
+                    frame,
+                    text=f'{label} ({key+1})',
+                    width=10,
+                    height=1,
+                    command=lambda: self.vote(label)
+                )
             )
+            # key bindings (so number pad can be used as shortcut)
+            master.bind(str(key+1), self.vote_key)
 
         # Add progress label
         progress_string = "%d/%d" % (self.index, self.n_paths)
@@ -89,10 +102,6 @@ class ImageGui:
 
         # Place the image in grid
         self.image_panel.grid(row=1, column=0, columnspan=self.n_labels+1, sticky='we')
-
-        # key bindings (so number pad can be used as shortcut)
-        for key in range(self.n_labels):
-            master.bind(str(key+1), self.vote_key)
 
     def show_next_image(self):
         """
@@ -122,8 +131,12 @@ class ImageGui:
         Processes a vote for a label: Initiates the file copying and shows the next image
         :param label: The label that the user voted for
         """
-        input_path = self.paths[self.index]
+        # input_path = self.paths[self.index]
+        input_path = self.records[self.index]['path']
+        self.records[self.index]['label'] = label
+        print(self.records[self.index])
         self._copy_image(input_path, self.destination, label)
+        self._write_data(self.records, self.data_path)
         self.show_next_image()
 
     def vote_key(self, event):
@@ -188,6 +201,26 @@ class ImageGui:
         print(" %s -> %s" % (input_path, output_path))
         shutil.move(input_path, output_path)
 
+    @staticmethod
+    def _write_data(records, path):
+        """
+        Moves a file to a new label folder using the shutil library. The file will be moved into a
+        subdirectory called label in the input folder. This is an alternative to _copy_image, which is not
+        yet used, function would need to be replaced above.
+        :param input_path: Path of the original image
+        :param label: The label
+        """
+        # _, file_name = os.path.split(input_path)
+        # # output_path = os.path.join(dirname, label, file_name)
+        # output_folder = os.path.join(destination, label)
+        # output_path = os.path.join(output_folder, file_name)
+        # os.makedirs(output_folder, exist_ok=True)
+        # # print(" %s --> %s" % (file_name, label))
+        # print(" %s -> %s" % (input_path, output_path))
+        # shutil.move(input_path, output_path)
+        with open(path, 'w') as f:
+            json.dump(records, f, indent=2, sort_keys=True)
+
 
 # def make_folder(directory):
 #     """
@@ -247,13 +280,17 @@ def main():
         paths = find_images(args.input_folder)
     # print(*paths, sep='\n')
 
+    records = defaultdict(dict)
+    for i, path in enumerate(paths):
+        records[i] = {'path': path, 'label': None}
+
     if not paths:
         print('[ERROR] No images found.')
         sys.exit(1)
 
     # Start the GUI
     master = tk.Tk()
-    app = ImageGui(master, labels, paths, output_folder)
+    app = ImageGui(master, labels, paths, records, output_folder)
     master.mainloop()
 
     return 0
