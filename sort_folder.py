@@ -34,7 +34,7 @@ class ImageGui:
     Useful, for sorting views into sub views or for removing outliers from the data.
     """
 
-    def __init__(self, master, labels, paths, records, destination):
+    def __init__(self, master, labels, records, destination):
         """
         Initialise GUI
         :param master: The parent window
@@ -55,7 +55,7 @@ class ImageGui:
         # Start at the first file name
         self.index = 0
         self.labels = labels
-        self.paths = paths
+        # self.paths = paths
         self.records = records
         self.destination = destination
         self.data_path = os.path.join(destination, 'data.json')
@@ -64,8 +64,8 @@ class ImageGui:
         self.n_labels = len(labels)
         # self.n_paths = len(paths)
         self.n_records = len(records)
-        print(self.n_records)
-        print(self.records)
+        # print(self.n_records)
+        # print(self.records)
 
         # Set empty image container
         self.image_raw = None
@@ -164,7 +164,8 @@ class ImageGui:
         else:
             self.index = index
         self._update_text_display(message=message)
-        self.set_image(self.paths[self.index])
+        # self.set_image(self.paths[self.index])
+        self.set_image(self.records[self.index]['path'])
         # if self.index < self.n_paths:
         #     self.set_image(self.paths[self.index])
         # else:
@@ -262,23 +263,23 @@ class ImageGui:
         print(" %s -> %s" % (input_path, output_path))
         shutil.copyfile(input_path, output_path)
 
-    @staticmethod
-    def _move_image(input_path, destination, label):
-        """
-        Moves a file to a new label folder using the shutil library. The file will be moved into a
-        subdirectory called label in the input folder. This is an alternative to _copy_image, which is not
-        yet used, function would need to be replaced above.
-        :param input_path: Path of the original image
-        :param label: The label
-        """
-        _, file_name = os.path.split(input_path)
-        # output_path = os.path.join(dirname, label, file_name)
-        output_folder = os.path.join(destination, label)
-        output_path = os.path.join(output_folder, file_name)
-        os.makedirs(output_folder, exist_ok=True)
-        # print(" %s --> %s" % (file_name, label))
-        print(" %s -> %s" % (input_path, output_path))
-        shutil.move(input_path, output_path)
+    # @staticmethod
+    # def _move_image(input_path, destination, label):
+    #     """
+    #     Moves a file to a new label folder using the shutil library. The file will be moved into a
+    #     subdirectory called label in the input folder. This is an alternative to _copy_image, which is not
+    #     yet used, function would need to be replaced above.
+    #     :param input_path: Path of the original image
+    #     :param label: The label
+    #     """
+    #     _, file_name = os.path.split(input_path)
+    #     # output_path = os.path.join(dirname, label, file_name)
+    #     output_folder = os.path.join(destination, label)
+    #     output_path = os.path.join(output_folder, file_name)
+    #     os.makedirs(output_folder, exist_ok=True)
+    #     # print(" %s --> %s" % (file_name, label))
+    #     print(" %s -> %s" % (input_path, output_path))
+    #     shutil.move(input_path, output_path)
 
     def _write_data(self, records, path):
         """
@@ -309,22 +310,39 @@ class ImageGui:
 #     if not os.path.exists(directory):
 #         os.makedirs(directory)
 
-
 def find_images(dirname):
     '''
     Put all image file paths into a list
     '''
-    paths = []
+    image_paths = []
     for path in glob.glob(os.path.join(dirname, '**'), recursive=True):
         _, ext = os.path.splitext(path)
         if os.path.isdir(path):
             continue
         elif ext.lower() in IMAGE_EXTENSIONS:
-            paths.append(path)
+            image_paths.append(path)
         else:
             pass
-    return paths
+    return image_paths
 
+def init_records(image_paths):
+    '''
+    Initialize records with image paths and empty labels.
+    '''
+    records = dict()
+    for i, path in enumerate(image_paths):
+        records[i] = {'path': path, 'label': None}
+    return records
+
+def load_records(path):
+    '''
+    Load records from json file.
+    '''
+    with open(path, 'r') as f:
+        records = json.load(f)
+    # Convert keys to ints.
+    records = {int(k): v for k, v in records.items()}
+    return records
 
 def main():
 
@@ -340,38 +358,32 @@ def main():
     parser.add_argument('-d', '--data', help='Path to data.json. (Continue from where you left off.)', required=False)
 
     args = parser.parse_args()
-    print(args)
+    # print(args)
 
     # grab input arguments from args structure
     # input_folder = args.folder
     labels = args.labels
     output_folder = args.output_folder
 
-    # # Make folder for the new labels
-    # for label in labels:
-    #     # make_folder(os.path.join(output_folder, label))
-    #     dirname = os.path.join(output_folder, label)
-    #     os.makedirs(dirname, exist_ok=True)
-
     if isinstance(args.images, list):
-        paths = args.images
-    else:
+        image_paths = args.images
+        records = init_records(image_paths)
+    elif isinstance(args.input_folder, str):
         # Put all image file paths into a list
-        paths = find_images(args.input_folder)
-    # print(*paths, sep='\n')
+        image_paths = find_images(args.input_folder)
+        records = init_records(image_paths)
+    elif isinstance(args.data, str):
+        records = load_records(args.data)
+        image_paths = [rec['path'] for rec in records.values() if os.path.exists(rec['path'])]
+    # print(*image_paths, sep='\n')
 
-    # records = defaultdict(dict)
-    records = dict()
-    for i, path in enumerate(paths):
-        records[i] = {'path': path, 'label': None}
-
-    if not paths:
+    if not image_paths:
         print('[ERROR] No images found.')
-        sys.exit(1)
+        return 1
 
     # Start the GUI
     master = tk.Tk()
-    app = ImageGui(master, labels, paths, records, output_folder)
+    app = ImageGui(master, labels, records, output_folder)
     master.mainloop()
 
     return 0
