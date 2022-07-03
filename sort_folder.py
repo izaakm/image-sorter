@@ -105,6 +105,15 @@ class ImageGui:
                 command=lambda: self.show_next_image()
             )
         )
+        self.buttons.append(
+            tk.Button(
+                frame,
+                text="Unlabeled",
+                fg="green",
+                # Command MUST be a lambda.
+                command=lambda: self.go_to_unlabeled()
+            )
+        )
         # self.buttons.append(tk.Button(frame, text="next im", width=10, height=1, fg='green', command=lambda l=label: self.move_next_image()))
         for key, label in enumerate(labels, start=1):
             self.buttons.append(
@@ -156,20 +165,15 @@ class ImageGui:
             self.index = index
         self._update_text_display(message=message)
         self.set_image(self.paths[self.index])
+        # if self.index < self.n_paths:
+        #     self.set_image(self.paths[self.index])
+        # else:
+        #     self.master.quit()
 
     def show_next_image(self):
         """
         Displays the next image in the paths list and updates the progress display
         """
-        # self.index += 1
-        # # progress_string = "%d/%d" % (self.index, self.n_paths)
-        # # self.progress_label.configure(text=progress_string)
-        # self._update_text_display()
-
-        # if self.index < self.n_paths:
-        #     self.set_image(self.paths[self.index])
-        # else:
-        #     self.master.quit()
         index = self.index + 1
         self._go_to_index(index)
 
@@ -177,18 +181,18 @@ class ImageGui:
         """
         Displays the next image in the paths list and updates the progress display
         """
-        # self.index -= 1
-        # if self.index < 0:
-        #     self.index = 0
-        # # progress_string = "%d/%d" % (self.index, self.n_paths)
-        # # self.progress_label.configure(text=progress_string)
-        # self._update_text_display()
-
-        # if self.index < self.n_paths:
-        #     self.set_image(self.paths[self.index])
-        # else:
-        #     self.master.quit()
         index = self.index - 1
+        self._go_to_index(index)
+
+    def go_to_unlabeled(self):
+        """
+        Displays the first unlabeled image in the paths list.
+        """
+        index = 0
+        while self.records[index]['label'] is not None:
+            index += 1
+            if index >= self.n_records:
+                break
         self._go_to_index(index)
 
     def set_image(self, path):
@@ -333,6 +337,7 @@ def main():
     # [TODO] Mutually exclusive group:
     parser.add_argument('--images', nargs='*', required=False)
     parser.add_argument('-f', '--input-folder', help='Find images in this directory.', required=False)
+    parser.add_argument('-d', '--data', help='Path to data.json. (Continue from where you left off.)', required=False)
 
     args = parser.parse_args()
     print(args)
