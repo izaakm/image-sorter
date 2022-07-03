@@ -62,7 +62,10 @@ class ImageGui:
 
         # Number of labels and paths
         self.n_labels = len(labels)
-        self.n_paths = len(paths)
+        # self.n_paths = len(paths)
+        self.n_records = len(records)
+        print(self.n_records)
+        print(self.records)
 
         # Set empty image container
         self.image_raw = None
@@ -73,48 +76,120 @@ class ImageGui:
         # self.set_image(paths[self.index])
         self.set_image(records[self.index]['path'])
 
+        # Add progress label
+        if isinstance(self.records[self.index]['label'], str):
+            # progress_string = "%d/%d" % (self.index, self.n_paths)
+            progress_string = '{}/{} ({})'.format(self.index+1, self.n_records, self.records[self.index]['label'])
+        else:
+            progress_string = "%d/%d" % (self.index+1, self.n_records)
+        self.progress_label = tk.Label(frame, text=progress_string)
+
         # Make buttons
+        _button_index = 0
         self.buttons = []
-        for key, label in enumerate(labels):
+        self.buttons.append(
+            tk.Button(
+                frame,
+                text="<",
+                fg="green",
+                # Command MUST be a lambda.
+                command=lambda: self.show_prev_image()
+            )
+        )
+        self.buttons.append(
+            tk.Button(
+                frame,
+                text=">",
+                fg="green",
+                # Command MUST be a lambda.
+                command=lambda: self.show_next_image()
+            )
+        )
+        # self.buttons.append(tk.Button(frame, text="next im", width=10, height=1, fg='green', command=lambda l=label: self.move_next_image()))
+        for key, label in enumerate(labels, start=1):
             self.buttons.append(
                 tk.Button(
                     frame,
-                    text=f'{label} ({key+1})',
+                    text=f'{label} ({key})',
                     width=10,
                     height=1,
                     command=lambda: self.vote(label)
                 )
             )
             # key bindings (so number pad can be used as shortcut)
-            master.bind(str(key+1), self.vote_key)
-
-        # Add progress label
-        progress_string = "%d/%d" % (self.index, self.n_paths)
-        self.progress_label = tk.Label(frame, text=progress_string, width=10)
-
-        # Place buttons in grid
-        for ll, button in enumerate(self.buttons):
-            button.grid(row=0, column=ll, sticky='we')
-            #frame.grid_columnconfigure(ll, weight=1)
+            master.bind(str(key), self.vote_key)
 
         # Place progress label in grid
-        self.progress_label.grid(row=0, column=self.n_labels, sticky='we')
+        row = 0
+        self.progress_label.grid(row=row, column=self.n_labels, sticky='we')
 
+        # Place buttons in grid
+        row += 1
+        for ll, button in enumerate(self.buttons):
+            button.grid(row=row, column=ll, sticky='we')
+            #frame.grid_columnconfigure(ll, weight=1)
         # Place the image in grid
-        self.image_panel.grid(row=1, column=0, columnspan=self.n_labels+1, sticky='we')
+        row += 1
+        self.image_panel.grid(row=row, column=0, columnspan=self.n_labels+1, sticky='we')
+
+    def _update_text_display(self, message=None):
+        # Add progress label
+        if isinstance(self.records[self.index]['label'], str):
+            # progress_string = "%d/%d" % (self.index, self.n_paths)
+            progress_string = '{}/{} ({})'.format(self.index+1, self.n_records, self.records[self.index]['label'])
+        else:
+            # progress_string = "%d/%d" % (self.index, self.n_paths)
+            progress_string = '{}/{}'.format(self.index+1, self.n_records)
+        if isinstance(message, str):
+            progress_string = message + ' ' + progress_string
+        self.progress_label.configure(text=progress_string)
+
+    def _go_to_index(self, index):
+        message = None
+        if index >= self.n_records:
+            self.index = self.n_records - 1
+            message = "Cannot go past last image"
+        elif index < 0:
+            self.index = 0
+            message = "Cannot go before first image"
+        else:
+            self.index = index
+        self._update_text_display(message=message)
+        self.set_image(self.paths[self.index])
 
     def show_next_image(self):
         """
         Displays the next image in the paths list and updates the progress display
         """
-        self.index += 1
-        progress_string = "%d/%d" % (self.index, self.n_paths)
-        self.progress_label.configure(text=progress_string)
+        # self.index += 1
+        # # progress_string = "%d/%d" % (self.index, self.n_paths)
+        # # self.progress_label.configure(text=progress_string)
+        # self._update_text_display()
 
-        if self.index < self.n_paths:
-            self.set_image(self.paths[self.index])
-        else:
-            self.master.quit()
+        # if self.index < self.n_paths:
+        #     self.set_image(self.paths[self.index])
+        # else:
+        #     self.master.quit()
+        index = self.index + 1
+        self._go_to_index(index)
+
+    def show_prev_image(self):
+        """
+        Displays the next image in the paths list and updates the progress display
+        """
+        # self.index -= 1
+        # if self.index < 0:
+        #     self.index = 0
+        # # progress_string = "%d/%d" % (self.index, self.n_paths)
+        # # self.progress_label.configure(text=progress_string)
+        # self._update_text_display()
+
+        # if self.index < self.n_paths:
+        #     self.set_image(self.paths[self.index])
+        # else:
+        #     self.master.quit()
+        index = self.index - 1
+        self._go_to_index(index)
 
     def set_image(self, path):
         """
@@ -134,7 +209,7 @@ class ImageGui:
         # input_path = self.paths[self.index]
         input_path = self.records[self.index]['path']
         self.records[self.index]['label'] = label
-        print(self.records[self.index])
+        # print(self.records[self.index])
         self._copy_image(input_path, self.destination, label)
         self._write_data(self.records, self.data_path)
         self.show_next_image()
@@ -201,8 +276,7 @@ class ImageGui:
         print(" %s -> %s" % (input_path, output_path))
         shutil.move(input_path, output_path)
 
-    @staticmethod
-    def _write_data(records, path):
+    def _write_data(self, records, path):
         """
         Moves a file to a new label folder using the shutil library. The file will be moved into a
         subdirectory called label in the input folder. This is an alternative to _copy_image, which is not
@@ -218,6 +292,7 @@ class ImageGui:
         # # print(" %s --> %s" % (file_name, label))
         # print(" %s -> %s" % (input_path, output_path))
         # shutil.move(input_path, output_path)
+        print(records[self.index])
         with open(path, 'w') as f:
             json.dump(records, f, indent=2, sort_keys=True)
 
@@ -280,7 +355,8 @@ def main():
         paths = find_images(args.input_folder)
     # print(*paths, sep='\n')
 
-    records = defaultdict(dict)
+    # records = defaultdict(dict)
+    records = dict()
     for i, path in enumerate(paths):
         records[i] = {'path': path, 'label': None}
 
