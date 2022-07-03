@@ -120,11 +120,12 @@ class ImageGui:
                 tk.Button(
                     frame,
                     text=f'{label} ({key})',
-                    width=10,
-                    height=1,
-                    command=lambda: self.vote(label)
+                    command=lambda l=label: self.vote(l)
                 )
             )
+            # I am not sure why this `l=label` is necessary, but it is.
+            #   command=lambda: self.vote(label)     ... uses whatever the value of label is at the time called.
+            #   command=lambda l=label: self.vote(l) ... uses whatever the value of label is at the time initialized.
             # key bindings (so number pad can be used as shortcut)
             master.bind(str(key), self.vote_key)
 
@@ -213,6 +214,7 @@ class ImageGui:
         """
         # input_path = self.paths[self.index]
         input_path = self.records[self.index]['path']
+        print('[DEBUG] Button label: "{}"'.format(label))
         self.records[self.index]['label'] = label
         # print(self.records[self.index])
         self._copy_image(input_path, self.destination, label)
@@ -297,7 +299,7 @@ class ImageGui:
         # # print(" %s --> %s" % (file_name, label))
         # print(" %s -> %s" % (input_path, output_path))
         # shutil.move(input_path, output_path)
-        print(records[self.index])
+        print(json.dumps(records[self.index], indent=2))
         with open(path, 'w') as f:
             json.dump(records, f, indent=2, sort_keys=True)
 
@@ -358,7 +360,7 @@ def main():
     parser.add_argument('-d', '--data', help='Path to data.json. (Continue from where you left off.)', required=False)
 
     args = parser.parse_args()
-    # print(args)
+    print(args)
 
     # grab input arguments from args structure
     # input_folder = args.folder
